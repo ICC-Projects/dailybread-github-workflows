@@ -1,0 +1,52 @@
+# This workflow will do a clean install of node dependencies, build the source code and run tests across different versions of node
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-nodejs-with-github-actions
+
+name: build-gh-release
+
+on:
+  workflow_call:
+    secrets:
+      token:
+        required: true
+
+jobs:
+  create:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout shared-workflow repo
+        uses: actions/checkout@v2
+        with:
+          repository: ICC-Projects/dailybread-github-workflows
+          path: wflw-repo
+      - uses: actions/checkout@v2
+        with:
+          path: workspace
+          token: ${{ secrets.token }}
+      - name: git-pull
+        run: |
+          cd workspace
+          git pull --no-rebase
+      - name: merge-repos
+        run: |
+          shopt -s dotglob
+          mv -v workspace/* .
+          rsync -a wflw-repo/.github .
+
+      - name: get-next-version
+        id: get_next_version
+        run: |
+          echo ::set-output name=tag_version::$(jq -r ".next" .last_release)
+
+      - name: create-release
+        id: create_release
+        run: |
+          git pull --no-rebase
+          echo $(jq -r ".version" package.json)
+          ./.github/scripts/gh-create-release.sh ${{ secrets.token }} v${{ steps.get_next_version.outputs.tag_version }}
+
+      - name: cleanup-create-release-failure
+        if: ${{ failure() }}
+        run: |
+          rsync -a wflw-repo/.github .
+          echo 'Cannot create your release :/. Deleting it...'
+          ./.github/scripts/gh-delete-release.sh ${{ secrets.token }} v${{ steps.get_next_version.outputs.tag_version }}

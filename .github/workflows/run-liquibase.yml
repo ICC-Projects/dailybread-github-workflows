@@ -1,0 +1,57 @@
+# This workflow will do a clean install of node dependencies, build the source code and run tests across different versions of node
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-nodejs-with-github-actions
+
+name: run-liquibase
+
+on:
+  workflow_call:
+    inputs:
+      gcloud-registry:
+        default: 'gcr.io'
+        required: false
+        type: string
+      gh-tag:
+        required: true
+        type: string
+    secrets:
+      db-hostname:
+        required: true
+      db-name:
+        required: true
+      db-user:
+        required: true
+      db-pwd:
+        required: true
+      token:
+        required: true
+      app-name:
+        required: true
+      gcloud-auth:
+        required: true
+      gcloud-project:
+        required: true
+
+jobs:
+  launch:
+    runs-on: ubuntu-latest
+    env:
+      DB_HOSTNAME: ${{ secrets.db-hostname }}
+      DB_NAME: ${{ secrets.db-name }}
+      DB_USER: ${{ secrets.db-user }}
+      DB_PWD: ${{ secrets.db-pwd }}
+    steps:
+      - uses: actions/checkout@v2
+      - name: login-to-gcloud-registry
+        id: login_to_gcloud_registry
+        uses: elgohr/gcloud-login-action@master
+        with:
+          account_key: ${{ secrets.gcloud-auth }}
+      - name: prepare-build
+        id: prepare_build
+        run: |
+          envsubst < src/liquibase/.env.liquibase > .env.liquibase.generated
+          echo ::set-output name=liquibase_env::$(echo .env.liquibase.generated)
+      - name: liquibase-docker-run
+        run: |
+          docker login -u "${{ steps.login_to_gcloud_registry.outputs.username }}" -p "${{ steps.login_to_gcloud_registry.outputs.password }}" "https://${{ inputs.gcloud-registry }}"
+          docker run --rm --env-file "${{ steps.prepare_build.outputs.liquibase_env }}" "${{ inputs.gcloud-registry }}/${{ secrets.gcloud-project }}/${{ secrets.app-name }}-liquibase:${{ inputs.gh-tag }}"

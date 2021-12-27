@@ -1,0 +1,63 @@
+name: create-release
+
+on:
+  workflow_call:
+    inputs:
+      category:
+        required: true
+        type: string
+    secrets:
+      token:
+        required: true
+
+jobs:
+  validate-inputs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout shared-workflow repo
+        uses: actions/checkout@v2
+        with:
+          repository: ICC-Projects/dailybread-github-workflows
+
+      - name: run-sh-to-validate-inputs
+        run: |
+          ./.github/scripts/validate-release-category-input.sh "${{ inputs.category }}"
+
+
+  create-release-branch:
+    needs: validate-inputs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout shared-workflow repo
+        uses: actions/checkout@v2
+        with:
+          repository: ICC-Projects/dailybread-github-workflows
+          path: wflw-repo
+      - name: Checkout develop
+        uses: actions/checkout@v2
+        with:
+          ref: develop
+          path: workspace
+          token: ${{ secrets.token }}
+      - name: merge-repos
+        run: |
+          shopt -s dotglob
+          mv -v workspace/* .
+          rsync -a wflw-repo/.github .
+
+      - name: prepare-release
+        id: prepare_release
+        run: |
+          ls -l
+          echo ::set-output name=prev_version::$(jq -r .version package.json)
+          echo ::set-output name=version::$(./.github/scripts/get-next-version.sh ${{ inputs.category }})
+
+      - name: create-release-branch
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          echo '{"type": "${{ inputs.category }}", "prev": "${{ steps.prepare_release.outputs.prev_version }}", "next": "${{ steps.prepare_release.outputs.version }}"}' > .last_release
+          git add .last_release
+          git commit -m 'release ${{ steps.prepare_release.outputs.version }} created...'
+          git checkout -b release/${{ inputs.category }}-${{ steps.prepare_release.outputs.version }}
+          git push --set-upstream origin release/${{ inputs.category }}-${{ steps.prepare_release.outputs.version }}

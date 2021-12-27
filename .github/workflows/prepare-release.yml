@@ -1,0 +1,78 @@
+# This workflow will do a clean install of node dependencies, build the source code and run tests across different versions of node
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-nodejs-with-github-actions
+
+name: prepare-release
+
+on:
+  workflow_call:
+    secrets:
+      token:
+        required: true
+
+jobs:
+  generate-changelog:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.token }}
+
+      - name: get-next-version
+        id: get_next_version
+        run: |
+          echo ::set-output name=version::$(jq -r ".next" .last_release)
+
+      - name: Generate change log
+        id: generate_changelog
+        uses: heinrichreimer/github-changelog-generator-action@v2.1.1 # https://github.com/marketplace/actions/generate-changelog
+        with:
+          token: ${{ secrets.token }}
+
+      - name: create-changelog-file
+        id: create_changelog_file
+        run: |
+          echo ${{ steps.generate_changelog.outputs.changelog }} > CHANGELOG.md
+          git config --global user.name "github-actions"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff-index --quiet HEAD || git commit -m '[ci skip] generate changelog for ${{ steps.get_next_version.outputs.version }}'
+          git push
+
+  bump-release-version:
+    needs:
+      - generate-changelog
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout shared-workflow repo
+        uses: actions/checkout@v2
+        with:
+          repository: ICC-Projects/dailybread-github-workflows
+          path: wflw-repo
+      - uses: actions/checkout@v2
+        with:
+          path: workspace
+          token: ${{ secrets.token }}
+      - name: git-pull
+        run: |
+          cd workspace
+          git pull --no-rebase
+      - name: merge-repos
+        run: |
+          shopt -s dotglob
+          mv -v workspace/* .
+          rsync -a wflw-repo/.github .
+
+      - name: get-next-version
+        id: get_next_version
+        run: |
+          echo ::set-output name=version::$(jq -r ".next" .last_release)
+
+      - name: bump-version-to-release-version
+        id: bump_version_release
+        run: |
+          ./.github/scripts/bump-version.sh ${{ steps.get_next_version.outputs.version }}
+          git config --global user.name "github-actions"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json
+          git commit -m '[ci skip] Bumped version number to ${{ steps.get_next_version.outputs.version }}'
+          git push

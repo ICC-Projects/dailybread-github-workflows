@@ -1,0 +1,70 @@
+# This workflow will do a clean install of node dependencies, build the source code and run tests across different versions of node
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-nodejs-with-github-actions
+
+name: docker-package
+
+on:
+  workflow_call:
+    inputs:
+      gcloud-registry:
+        default: 'gcr.io'
+        required: false
+        type: string
+      build-liquibase:
+        default: false
+        required: false
+        type: boolean
+      is-release:
+        default: false
+        required: false
+        type: boolean
+    secrets:
+      token:
+        required: true
+      app-name:
+        required: true
+      gcloud-auth:
+        required: true
+      gcloud-project:
+        required: true
+
+jobs:
+  launch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: git-pull
+        run: |
+          git pull --no-rebase
+      - name: get-next-version
+        id: get_next_version
+        env:
+          TAG: ${{ github.sha }}
+          IS_RELEASE: ${{ inputs.is-release }}
+        run: |
+          if [ $IS_RELEASE == 'true' ]
+          then
+              echo ::set-output name=tag_version::$(jq -r ".next" .last_release)
+          else
+              echo ::set-output name=tag_version::${{ github.sha }}
+          fi
+      - name: build-and-push-liquibase
+        if: ${{ inputs.build-liquibase }}
+        uses: RafikFarhad/push-to-gcr-github-action@v3.0.2 # https://github.com/marketplace/actions/push-to-gcr-github-action
+        with:
+          gcloud_service_key: ${{ secrets.gcloud-auth }}
+          registry: ${{ inputs.gcloud-registry }}
+          project_id: ${{ secrets.gcloud-project }}
+          image_name: ${{ secrets.app-name }}-liquibase
+          image_tag: ${{ steps.get_next_version.outputs.tag_version }}
+          context: ./src/liquibase
+
+      - name: build-and-push-app
+        uses: RafikFarhad/push-to-gcr-github-action@v3.0.2 # https://github.com/marketplace/actions/push-to-gcr-github-action
+        with:
+          gcloud_service_key: ${{ secrets.gcloud-auth }}
+          registry: ${{ inputs.gcloud-registry }}
+          project_id: ${{ secrets.gcloud-project }}
+          image_name: ${{ secrets.app-name }}
+          image_tag: ${{ steps.get_next_version.outputs.tag_version }}
+          context: .

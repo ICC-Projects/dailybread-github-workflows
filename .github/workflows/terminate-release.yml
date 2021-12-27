@@ -1,0 +1,90 @@
+# This workflow will do a clean install of node dependencies, build the source code and run tests across different versions of node
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-nodejs-with-github-actions
+
+name: terminate-release
+
+on:
+  workflow_call:
+    secrets:
+      token:
+        required: true
+
+jobs:
+  bump-snapshot-version:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout shared-workflow repo
+        uses: actions/checkout@v2
+        with:
+          repository: ICC-Projects/dailybread-github-workflows
+          path: wflw-repo
+      - uses: actions/checkout@v2
+        with:
+          path: workspace
+          token: ${{ secrets.token }}
+      - name: git-pull
+        run: |
+          cd workspace
+          git pull --no-rebase
+      - name: merge-repos
+        run: |
+          shopt -s dotglob
+          mv -v workspace/* .
+          rsync -a wflw-repo/.github .
+
+      - name: get-next-version-snapshot
+        id: get_next_version_snapshot
+        run: |
+          echo ::set-output name=tag_snapshot::$(jq -r ".next" .last_release)-SNAPSHOT
+
+      - name: bump-version-to-snapshot-version
+        id: bump_version_snapshot
+        run: |
+          ./.github/scripts/bump-version.sh ${{ steps.get_next_version_snapshot.outputs.tag_snapshot }}
+          git config --global user.name "github-actions"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json
+          git commit -m '[ci skip] Bumped version number to ${{ steps.get_next_version_snapshot.outputs.tag_snapshot }}'
+          git push
+
+      - name: cleanup-create-release-failure
+        if: ${{ failure() }}
+        run: |
+          rsync -a wflw-repo/.github .
+          echo 'Cannot create your release :/. Deleting it...'
+          ./.github/scripts/gh-delete-release.sh ${{ secrets.CI_GITHUB_TOKEN }} v${{ steps.get_next_version.outputs.tag_version }}
+          
+  merge-release-into-develop:
+    needs:
+      - bump-snapshot-version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.token }}
+      - name: git-pull
+        run: |
+          git pull --no-rebase
+      - name: get-next-version-snapshot
+        id: get_next_version_snapshot
+        run: |
+          echo ::set-output name=version::$(jq -r ".next" .last_release)
+          echo ::set-output name=type::$(jq -r ".type" .last_release)
+  
+      - name: merge-release--into-->develop
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout develop
+          git pull origin develop
+  
+          git checkout release/${{ steps.get_next_version_snapshot.outputs.type }}-${{ steps.get_next_version_snapshot.outputs.version }}
+          git pull origin release/${{ steps.get_next_version_snapshot.outputs.type }}-${{ steps.get_next_version_snapshot.outputs.version }}
+          git reset --hard origin/release/${{ steps.get_next_version_snapshot.outputs.type }}-${{ steps.get_next_version_snapshot.outputs.version }}
+          git merge --allow-unrelated-histories -s ours develop -m "[ci skip] [for update] merge develop into release/${{ steps.get_next_version_snapshot.outputs.type }}-${{ steps.get_next_version_snapshot.outputs.version }}"
+          git push origin release/${{ steps.get_next_version_snapshot.outputs.type }}-${{ steps.get_next_version_snapshot.outputs.version }}
+  
+          git checkout develop
+          git pull origin develop
+          git merge --allow-unrelated-histories release/${{ steps.get_next_version_snapshot.outputs.type }}-${{ steps.get_next_version_snapshot.outputs.version }}
+          git push
