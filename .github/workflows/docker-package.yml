@@ -50,7 +50,7 @@ jobs:
           fi
       - name: build-and-push-liquibase
         if: ${{ inputs.build-liquibase }}
-        uses: RafikFarhad/push-to-gcr-github-action@v3.0.2 # https://github.com/marketplace/actions/push-to-gcr-github-action
+        uses: RafikFarhad/push-to-gcr-github-action@v4 # https://github.com/marketplace/actions/push-to-gcr-github-action
         with:
           gcloud_service_key: ${{ secrets.gcloud-auth }}
           registry: ${{ inputs.gcloud-registry }}
@@ -60,7 +60,7 @@ jobs:
           context: ./src/liquibase
 
       - name: build-and-push-app
-        uses: RafikFarhad/push-to-gcr-github-action@v3.0.2 # https://github.com/marketplace/actions/push-to-gcr-github-action
+        uses: RafikFarhad/push-to-gcr-github-action@v4 # https://github.com/marketplace/actions/push-to-gcr-github-action
         with:
           gcloud_service_key: ${{ secrets.gcloud-auth }}
           registry: ${{ inputs.gcloud-registry }}
