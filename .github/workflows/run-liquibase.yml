@@ -22,6 +22,8 @@ on:
         required: true
       db-pwd:
         required: true
+      db-port:
+        required: true
       token:
         required: true
       app-name:
@@ -39,6 +41,7 @@ jobs:
       DB_NAME: ${{ secrets.db-name }}
       DB_USER: ${{ secrets.db-user }}
       DB_PWD: ${{ secrets.db-pwd }}
+      DB_PORT: ${{ secrets.db-port }}
     steps:
       - uses: actions/checkout@v2
       - name: login-to-gcloud-registry
