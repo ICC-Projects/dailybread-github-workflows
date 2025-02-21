@@ -13,14 +13,14 @@ jobs:
   generate-changelog:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
           token: ${{ secrets.token }}
 
       - name: get-next-version
         id: get_next_version
         run: |
-          echo ::set-output name=version::$(jq -r ".next" .last_release)
+          echo "version::$(jq -r ".next" .last_release)" >> $GITHUB_OUTPUT
 
       - name: Generate change log
         id: generate_changelog
@@ -44,11 +44,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout shared-workflow repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           repository: ICC-Projects/dailybread-github-workflows
           path: wflw-repo
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
           path: workspace
           token: ${{ secrets.token }}
@@ -65,7 +65,7 @@ jobs:
       - name: get-next-version
         id: get_next_version
         run: |
-          echo ::set-output name=version::$(jq -r ".next" .last_release)
+          echo "version::$(jq -r ".next" .last_release)" >> $GITHUB_OUTPUT
 
       - name: bump-version-to-release-version
         id: bump_version_release

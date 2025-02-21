@@ -32,7 +32,7 @@ jobs:
   launch:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: git-pull
         run: |
           git pull --no-rebase
@@ -44,9 +44,9 @@ jobs:
         run: |
           if [ $IS_RELEASE == 'true' ]
           then
-              echo ::set-output name=tag_version::$(jq -r ".next" .last_release)
+              echo "tag_version::$(jq -r ".next" .last_release)" >> $GITHUB_OUTPUT
           else
-              echo ::set-output name=tag_version::${{ github.sha }}
+              echo "tag_version::${{ github.sha }}" >> $GITHUB_OUTPUT
           fi
       - name: build-and-push-liquibase
         if: ${{ inputs.build-liquibase }}
