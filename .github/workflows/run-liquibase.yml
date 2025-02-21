@@ -46,7 +46,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: login-to-gcloud-registry
         id: login_to_gcloud_registry
-        uses: elgohr/gcloud-login-action@master
+        uses: elgohr/gcloud-login-action@v2
         with:
           account_key: ${{ secrets.gcloud-auth }}
       - name: prepare-build
