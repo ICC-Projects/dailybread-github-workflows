@@ -53,7 +53,7 @@ jobs:
         id: prepare_build
         run: |
           envsubst < src/liquibase/.env.liquibase > .env.liquibase.generated
-          echo "liquibase_env::$(echo .env.liquibase.generated)" >> $GITHUB_OUTPUT
+          echo "liquibase_env=$(echo .env.liquibase.generated)" >> $GITHUB_OUTPUT
       - name: liquibase-docker-run
         run: |
           docker login -u "${{ steps.login_to_gcloud_registry.outputs.username }}" -p "${{ steps.login_to_gcloud_registry.outputs.password }}" "https://${{ inputs.gcloud-registry }}"

@@ -44,9 +44,9 @@ jobs:
         run: |
           if [ $IS_RELEASE == 'true' ]
           then
-              echo "tag_version::$(jq -r ".next" .last_release)" >> $GITHUB_OUTPUT
+              echo "tag_version=$(jq -r ".next" .last_release)" >> $GITHUB_OUTPUT
           else
-              echo "tag_version::${{ github.sha }}" >> $GITHUB_OUTPUT
+              echo "tag_version=${{ github.sha }}" >> $GITHUB_OUTPUT
           fi
       - name: build-and-push-liquibase
         if: ${{ inputs.build-liquibase }}

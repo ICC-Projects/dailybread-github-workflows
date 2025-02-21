@@ -49,8 +49,8 @@ jobs:
         id: prepare_release
         run: |
           ls -l
-          echo "prev_version::$(jq -r .version package.json)" >> $GITHUB_OUTPUT
-          echo "version::$(./.github/scripts/get-next-version.sh ${{ inputs.category }})" >> $GITHUB_OUTPUT
+          echo "prev_version=$(jq -r .version package.json)" >> $GITHUB_OUTPUT
+          echo "version=$(./.github/scripts/get-next-version.sh ${{ inputs.category }})" >> $GITHUB_OUTPUT
 
       - name: create-release-branch
         run: |

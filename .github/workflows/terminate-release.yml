@@ -35,7 +35,7 @@ jobs:
       - name: get-next-version-snapshot
         id: get_next_version_snapshot
         run: |
-          echo "tag_snapshot::$(jq -r ".next" .last_release)-SNAPSHOT" >> $GITHUB_OUTPUT
+          echo "tag_snapshot=$(jq -r ".next" .last_release)-SNAPSHOT" >> $GITHUB_OUTPUT
 
       - name: bump-version-to-snapshot-version
         id: bump_version_snapshot
@@ -68,8 +68,8 @@ jobs:
       - name: get-next-version-snapshot
         id: get_next_version_snapshot
         run: |
-          echo "version::$(jq -r ".next" .last_release)" >> $GITHUB_OUTPUT
-          echo "type::$(jq -r ".type" .last_release)" >> $GITHUB_OUTPUT
+          echo "version=$(jq -r ".next" .last_release)" >> $GITHUB_OUTPUT
+          echo "type=$(jq -r ".type" .last_release)" >> $GITHUB_OUTPUT
   
       - name: merge-release--into-->develop
         run: |

@@ -35,7 +35,7 @@ jobs:
       - name: get-next-version
         id: get_next_version
         run: |
-          echo "tag_version::$(jq -r ".next" .last_release)" >> $GITHUB_OUTPUT
+          echo "tag_version=$(jq -r ".next" .last_release)" >> $GITHUB_OUTPUT
 
       - name: create-release
         id: create_release
